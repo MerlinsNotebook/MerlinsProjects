@@ -2,8 +2,8 @@
 
 
 
-- WELCOME TO MY PAGE!
-- 👋 Hello, welcome to my projects page. This is @MerlinsNotebook and you will be seeing projects I have or am currently working on. 
+
+- 👋 Hello, welcome to my projects page. This is @MerlinsNotebook and you will be seeing projects I have or am currently working on. In the repository, my RMD files are project files.  
 - 👀 My focus is in statistics, data analysis, and machine learning. I am also programming using R, Python, SQL, HTML, CSS, and Javascript.  
 - 🌱 I’m currently furthering my knowledge in machine learning and AI. 
 - 💞️ I’m looking to collaborate on data analysis projects! So, if you have a large file of data waiting to be cleaned then send it my way!
