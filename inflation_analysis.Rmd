@@ -1,0 +1,748 @@
+---
+title: "Inflation Analysis"
+author: "Merlin Castillo"
+date: '2022-12-06'
+output: html_document
+---
+
+This document describes the steps taken to clean the datasets gathered. These steps have helped with the creation of one dataframe, running regression analysis, creating histogram plots. And all other analysis used to interpret datasets.  
+
+```{r eval=FALSE}
+######################%
+# INFLATION ANALYSIS Code: Modified Version#
+######################%
+
+#Audit Data Analytics 
+
+
+#after careful review of the first analysis. The linear relationships of our current 3 variables were not aligning up to hypothesis expectations. Because of this we have decided to modify the date range in our research. Instead of conducting research from 1983 to 2022. Let us bump down our date range from January 2000- October 2022
+
+#lets copy the following code over from our first draft. 
+
+##############%
+# 0. setup ####
+##############%
+
+library(GGally)
+require(tidyverse)
+require(gridExtra)
+require(broom)  # installed with tidyverse
+require(readxl) # installed with tidyverse
+require(usdm)   # VIF calculation
+require(pROC)   # ROC curves
+library(dplyr)
+require(GGally)  # to make ggplot-style scatterplot matrix
+
+library(wktmo)
+#for the plots 
+
+library(ggplot2)
+
+library(car)
+
+library(Av)
+library("scales")
+
+#theme info: for the graphs 
+
+
+theme.info <- theme(plot.title = element_text(size=16, hjust=0.5),
+                    axis.title = element_text(size=14),
+                    axis.text = element_text(size=14))
+
+
+######################################%
+# 1. read data file, data cleaning ####
+######################################%
+
+#let us add the following variables to our research: 
+
+
+#mcpi = Median CPI 
+#unemp.rate = Unemployment Rate 
+#mortgage.rate = Mortgage Rate
+#real.int.rate = Real Interest Rate 
+#avg.electricity.prices = Average Electricity Prices 
+#M2 = M2
+
+#reading down all the data files to create one coherent dataset 
+
+mcpi <- read_csv("MCPI.csv")
+
+
+unemp.rate <- read_csv("UNRATE.csv")
+
+mortgage.rate<- read_csv("30-YearFixedRateMortgageAverageintheUnitedStates.csv")
+
+avg.electricity.prices <- read_csv("Average Price Electricity per Kilowatt-Hour in U.S. City Average.csv")
+
+
+
+
+real.int.rate <- read.csv("Real Interest Rate.csv")
+
+M2 <- read.csv("WM2NS.csv")
+
+PPI <- read.csv("PPI.csv")
+
+GasPrices <- read.csv("Regular Conventional Gas Prices.csv")
+
+
+
+
+#Note: For the following variables such as: MCPI, unemployment rate, mortgage rate, avg electrcity prices.We will cut down the date ranges from January 2000 - 2022
+
+
+#let us begin with umeployment rate
+
+###################################%
+# 1.b unemprate row elimination######
+
+new.unemprate <- unemp.rate %>% slice(-1:-624)
+
+new.unemprate
+
+
+new.unemprate$UNRATE <- new.unemprate$UNRATE/100
+
+
+new.unemprate
+
+###################################%
+# 1.c mortgage rate row elimination######
+
+new.mortrate <- mortgage.rate %>% slice(-1:-1501)
+
+new.mortrate
+
+mortgage.rate2 <-tapply(new.mortrate[[2]], format(new.mortrate[[1]], "%Y-%m"), mean)
+
+
+#the result gives us an array. let us convert our array into a df 
+
+mortgage.rate2 <- as.data.frame.table(mortgage.rate2)
+
+mortgage.rate2
+#looking at the data we can see that there are 266 observations in the following mortgage rate dataset. This is because the data goes up to november 2022. For this research our most recent month should be october 2022
+
+
+mortgage.rate2<- mortgage.rate2 %>% slice(-275)
+
+mortgage.rate2$Freq <- mortgage.rate2$Freq/100
+
+mortgage.rate2
+###################################%
+# 1.d elimination of the years in avg electricity price dataset and correction of errors
+
+
+new.avg.elec.price <- avg.electricity.prices %>% slice(-1:-254)
+
+###################################%
+# 1.e elimination of mcpi to start @ year 2000
+new.mcpi<- mcpi %>% slice(-1:-204)
+
+new.mcpi$MEDCPIM158SFRBCLE <- new.mcpi$MEDCPIM158SFRBCLE/100
+
+new.mcpi
+###################################%
+#1.f real interest rate 
+
+real.int.rate
+
+mod.rintrate <- real.int.rate %>% slice(-1:-216)
+mod.rintrate
+
+mod.rintrate <- mod.rintrate %>% slice(-275)
+
+mod.rintrate$REAINTRATREARAT10Y <- mod.rintrate$REAINTRATREARAT10Y/100
+
+###################################%
+#1.g M2
+
+#eliminate 1000 rows to shrink dataset from 2000 to october 2022
+mod.M2 <- M2 %>% slice(-1:-1000)
+
+
+#now it is important to convert the weekly data to monthly data, for this we will use the tapply function used for previous variables 
+modified.m2 <-tapply(mod.M2[[2]], format(mod.M2[[1]],"%Y-%m"), mean)
+
+monthlyM2 <- weekToMonth(mod.M2$WM2NS, year = 2000, wkIndex = 1, wkMethod = "ISO")
+
+monthlyM2
+#there is an extra number of november in our new dataframe so let us modify using the slice function 
+
+monthlyM2 <- monthlyM2 %>% slice(-275)
+
+
+###################################%
+#1.h PPI -
+PPI
+
+mod.PPI <- PPI %>% slice(-1:-181)
+
+mod.PPI
+
+###################################%
+#1.i GAS PRICES
+
+mod.gasprices <- GasPrices%>% slice(-1:-489)
+
+mod.gasprices
+
+#convert character into numeric 
+mod.gasprices <- mod.gasprices%>%
+  mutate(GASREGCOVW = as.numeric(GASREGCOVW))
+
+#convert weekly to monthly data 
+
+monthlygas <- weekToMonth(mod.gasprices$GASREGCOVW, year = 2000, wkIndex = 1, wkMethod = "ISO")
+
+#delete the extra two rows 
+monthlygas <- monthlygas%>% slice(-275:-276)
+
+
+###################################%
+# 1.j let us merge all of our variables into one dataframe so that we can adequately run tests ######
+
+
+###################################%
+# 1.x let us merge all eight ariables into one dataframe so that we can adequately run tests ######
+
+
+impact.econ <- merge(x = new.mcpi , y = new.unemprate, by = "DATE", all.x = T, all.y = T)
+
+
+#now to merge the remaining variables = mortgage rate, and average electricity prices we need to conduct a right join 
+
+impact.econ$MortgageRate <- mortgage.rate2$Freq
+impact.econ$AvgEPrices <- new.avg.elec.price$APU000072610
+impact.econ$GasPrices <- monthlygas$value
+impact.econ$InterestRate <- mod.rintrate$REAINTRATREARAT10Y
+impact.econ$M2 <- monthlyM2$value
+
+impact.econ$PPI <- mod.PPI$PCUOMFGOMFG
+impact.econ
+
+
+ 
+
+
+#AvgEPrices need to be converted to numeric data
+
+impact.econ <- impact.econ%>%
+  mutate(AvgEPrices = as.numeric(AvgEPrices))
+
+impact.econ <- impact.econ%>%
+  mutate(PPI = as.numeric(PPI))
+
+#lets rename our CPI columns 
+
+names(impact.econ)[2] <- "CPI"
+
+#verify our new dataset 
+
+impact.econ
+
+
+##################################%
+# 2. exploratory data analysis ####
+##################################%
+
+count.NA <- function(impact.econ) sum(is.na(impact.econ))
+
+min.impact.econ <- impact.econ %>%
+  # choose numerical columns
+  dplyr::select(CPI:PPI) %>%
+  summarize_all(min, na.rm=TRUE)
+median.impact.econ <- impact.econ %>%
+  # choose numerical columns
+  dplyr::select(CPI:PPI) %>%
+  summarize_all(median, na.rm=TRUE)
+max.impact.econ <- impact.econ %>%
+  # choose numerical columns
+  dplyr::select(CPI:PPI) %>%
+  summarize_all(max, na.rm=TRUE)
+mean.impact.econ <- impact.econ %>%
+  # choose numerical columns
+  dplyr::select(CPI:PPI) %>%
+  summarize_all(mean, na.rm=TRUE)
+sd.impact.econ <- impact.econ %>%
+  # choose numerical columns
+  dplyr::select(CPI:PPI) %>%
+  summarize_all(sd, na.rm=TRUE) 
+# count number of NAs in each numerical column
+na.impact.econ <- impact.econ %>%
+  dplyr::select(CPI:PPI) %>%
+  summarize_all(count.NA)
+
+
+
+# combining our summary statistics into a single table
+impact.econ.stats <-bind_rows(min.impact.econ, median.impact.econ, max.impact.econ, 
+                              mean.impact.econ, sd.impact.econ, na.impact.econ) %>%
+  add_column(statistic = c("minimum", "median", "maximum", 
+                           "mean", "standard deviation", "missing"),
+             .before=TRUE) 
+
+impact.econ.stats
+
+
+#univariate plots -> histograms 
+
+#let us check to see the distribution of our data 
+
+h1 <- impact.econ %>%
+  ggplot(aes(CPI)) +
+  geom_histogram(bins=20, col="gray50", fill="purple") +
+  ggtitle("Histogram of CPI (%)") +
+  labs(x="% of CPI") +
+  theme.info
+h1
+
+
+#let us modify the histogram using ggplot2
+ggplot(data = impact.econ, aes(impact.econ$CPI)) + geom_histogram(bins = 12, col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for CPI") +
+  labs(x="CPI", y= "Count") +
+  geom_density(col=2)
+  
+  
+
+
+
+h1
+
+h2 <- hist(impact.econ$UNRATE,
+           main="Histogram of Unemployment Rate",
+           xlab="Unemployment Rate",
+           ylab="Frequency",
+           border="Green",
+           col="cadetblue",
+           xlim=c (0,15),
+           ylim=c(0,150))
+
+hist(impact.econ$UNRATE)
+
+
+ggplot(data = impact.econ, aes(`UNRATE`)) + geom_histogram(bins = 15, col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for Unemployment Rate") +
+  labs(x="Unemployment Rate", y= "Count") +
+  geom_density(col=2)+
+  xlim(c(0,.15))
+
+
+
+h2
+
+
+h3 <- hist(impact.econ$MortgageRate,
+           main="Histogram of Mortgage Rate",
+           xlab="Mortgage Rate",
+           ylab="Frequency",
+           border="Green",
+           col="cadetblue",
+           xlim=c (0,16),
+           ylim=c(0,60))
+
+
+
+ggplot(data = impact.econ, aes(`MortgageRate`)) + geom_histogram(bins = 15, col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for Mortgage Rate") +
+  labs(x="Mortgage Rate", y= "Count") +
+  geom_density(col=2)+
+  xlim(c(0,.08))
+
+
+
+
+h3
+
+h4 <- hist(impact.econ$AvgEPrices,
+           main="Histogram of Electricity Prices (kw/hr)",
+           xlab="Avg Price kw/hr",
+           ylab="Frequency",
+           border="Green",
+           col="cadetblue",
+           xlim=c (0,0.2),
+           ylim=c(0,140))
+
+ggplot(data = impact.econ, aes(`AvgEPrices`)) + geom_histogram(bins = 15, col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for Average Electricity Prices") +
+  labs(x="Average Electricity Prices(kw/hr)", y= "Count") +
+  geom_density(col=2)+
+  xlim(c(0,.17))
+
+
+
+ggplot(data = impact.econ, aes(`AvgEPrices`)) + geom_histogram(col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for Average Electricity Prices") +
+  labs(x="Average Electricity Prices (kw/hr)", y= "Count") +
+  geom_density(col=2)
+
+
+
+
+
+
+h5 <- impact.econ %>%
+  ggplot(aes(GasPrices)) +
+  geom_histogram(bins=20, col="gray50", fill="cadetblue") +
+  ggtitle("Histogram of \n% CPI") +
+  labs(x="% of CPI") +
+  theme.info
+
+
+
+
+
+#use sturges rule
+
+ggplot(data = impact.econ, aes(`GasPrices`)) + geom_histogram(bins = 15, col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for Gas Prices") +
+  labs(x="Gas Prices ($/Gal)", y= "Count") +
+  geom_density(col=5)+
+  xlim(c(0,20))
+
+
+
+
+
+h5
+
+h6 <- impact.econ %>%
+  ggplot(aes(InterestRate)) +
+  geom_histogram(bins=20, col="gray50", fill="cadetblue") +
+  ggtitle("Histogram of \n% CPI") +
+  labs(x="% of CPI") +
+  theme.info
+
+ggplot(data = impact.econ, aes(`InterestRate`)) + geom_histogram(bins = 15, col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for Interest Rate") +
+  labs(x="Interest Rate") +
+  geom_density(col=2)+
+  xlim(c(-.004,.04))
+
+min(impact.econ$InterestRate)
+
+h6
+
+
+h7 <- impact.econ %>%
+  ggplot(aes(M2)) +
+  geom_histogram(bins=20, col="gray50", fill="cadetblue") +
+  ggtitle("Histogram of \n% CPI") +
+  labs(x="% of CPI") +
+  theme.info
+
+ggplot(data = impact.econ, aes(`M2`)) + geom_histogram(bins = 15, col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for M2") +
+  labs(x="M2(Billions of $)") +
+  geom_density(col=2) +
+  scale_x_continuous(labels = comma, limits = c(0,100000))
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+h8 <- impact.econ %>%
+  ggplot(aes(PPI)) +
+  geom_histogram(bins=20, col="gray50", fill="cadetblue") +
+  ggtitle("Histogram of \n% CPI") +
+  labs(x="% of CPI") +
+  theme.info
+
+
+
+ggplot(data = impact.econ, aes(`PPI`)) + geom_histogram(bins = 15, col = "darkorange", fill = "lightskyblue4") +
+  labs(title = "Histogram for PPI") +
+  labs(x="PPI", y= "Count") +
+  geom_density(col=5) +
+  xlim(c(0,250))
+
+h8
+
+
+#determining if the following variables are linear when it comes to the CPI 
+
+#the following variables that will be tested are MortgageRate, Unemployment Rate, Avg Electricity Prices 
+
+plot(CPI ~ UNRATE, data = impact.econ) #linear, with correlation going towards the left 
+
+#let us improve the above correlation graph
+
+library(ggplot2)
+
+
+
+cpi.unemp.rate <-ggplot(impact.econ, aes(x = `UNRATE`, y = `CPI`, color = DATE)) +
+  geom_point()
+
+
+ggp <- cpi.unemp.rate + labs (x= "Unemployment Rate (%)", y = "CPI", title = "Correlation Between CPI & Unemployment Rate")
+
+
+ggp
+
+ggp + 
+  coord_cartesian(xlim = c(0,.15))
+
+
+
+
+plot(CPI ~ MortgageRate, data = impact.econ) #linear
+
+cpi.mortgage.rate <-ggplot(impact.econ, aes(x = `MortgageRate`, y = `CPI`, color = DATE)) +
+  geom_point()
+
+
+ggp.mrate <- cpi.mortgage.rate + labs (x= "Mortgage Rate", y = "CPI", title = "Correlation Between CPI & Mortgage Rate")
+
+
+ggp.mrate + 
+  coord_cartesian(xlim = c(0,.08))
+
+
+
+
+
+
+
+
+plot(CPI ~ AvgEPrices, data = impact.econ) #looks to be linear 
+
+cpi.avgeprices <-ggplot(impact.econ, aes(x = `AvgEPrices`, y = `CPI`, color = DATE)) +
+  geom_point()
+
+
+ggp.avg.eprices <- cpi.avgeprices + labs (x= "Average Electricity Prices (kw/hr)", y = "CPI", title = "Correlation Between CPI & Average Electricity Prices")
+
+
+
+ggp.avg.eprices
+
+#CPI - Gas Prices
+
+plot(CPI ~ GasPrices, data = impact.econ) # linear going to upwards towards the rights
+
+cpi.gasprices <-ggplot(impact.econ, aes(x = `GasPrices`, y = `CPI`, color = DATE)) +
+  geom_point()
+
+
+ggp.gasprices <- cpi.gasprices + labs (x= "Gas Prices", y = "CPI", title = "Correlation Between CPI & Gas Prices")
+
+ggp.gasprices
+
+
+
+plot(CPI ~ InterestRate, data = impact.econ) #linear
+
+cpi.intrate <-ggplot(impact.econ, aes(x = `InterestRate`, y = `CPI`, color = DATE)) +
+  geom_point()
+
+
+ggp.intrate <- cpi.intrate + labs (x= "Interest Rate", y = "CPI", title = "Correlation Between CPI & Interest Rate")
+
+ggp.intrate
+
+
+
+plot(CPI ~ M2, data = impact.econ) #linear
+
+cpi.m2 <-ggplot(impact.econ, aes(x = `M2`, y = `CPI`, color = DATE)) +
+  geom_point()
+
+
+ggp.m2 <- cpi.m2 + labs (x= "M2", y = "CPI", title = "Correlation Between CPI & M2")
+
+
+ggp.m2
+
+
+
+
+plot(CPI ~ PPI, data = impact.econ) #linear
+
+
+cpi.ppi <-ggplot(impact.econ, aes(x = `PPI`, y = `CPI`, color = DATE)) +
+  geom_point()
+
+
+ggp.ppi <- cpi.ppi + labs (x= "PPI", y = "CPI", title = "Correlation Between CPI & PPI")
+
+ggp.ppi
+
+
+#creating a scatterplot of every possible pair of variables 
+
+col.vector <- rep("firebrick", times=nrow(impact.econ))
+
+pairs(impact.econ[,c("CPI", "MortgageRate", "UNRATE", "AvgEPrices", "GasPrices","InterestRate", "M2", "PPI")], 
+      col=col.vector, 
+      pch=19, las=TRUE)
+
+
+
+
+#create a similar plot to the correlations done above
+  #this contains the actual linear correlation coefficients for each pair of variables 
+
+
+
+
+ggpairs(impact.econ)
+
+
+
+
+#each of the predictor variables appears to have a noticeable linear correlation with response variable CPI aka CPI so we will proceed to fit the linear regression model to the data 
+
+#lets start out with the simple regression. Comparing the response variable with each predictor variable. 
+
+simpl.1 <- lm(CPI~MortgageRate, data = impact.econ)
+
+summary(simpl.1) #not significant, should not be included into the multiple regression
+
+
+
+plot(simpl.1)
+
+ggplot(impact.econ, aes(y=CPI, x= MortgageRate))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Mortgage Rate", y= "CPI", title =  "Regression of CPI & Mortgage Rate")
+
+
+
+
+simpl.2 <- lm(CPI~ UNRATE, data = impact.econ)
+
+
+summary(simpl.2) #significant
+
+
+ggplot(impact.econ, aes(y=CPI, x= UNRATE))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Unemployment Rate", y= "CPI", title =  "Regression of CPI & Unemployment Rate")
+
+
+simpl.3 <- lm(CPI~ AvgEPrices, data = impact.econ)
+
+summary(simpl.3) #significant 
+
+ggplot(impact.econ, aes(y=CPI, x= AvgEPrices))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Average Electricity Prices (kw/hr)", y= "CPI", title =  "Regression of CPI & Avg Electricity Prices")
+
+
+
+simpl.4 <- lm(CPI~ GasPrices, data = impact.econ)
+
+ggplot(impact.econ, aes(y=CPI, x= GasPrices))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Gas Prices($/Gal)", y= "CPI", title =  "Regression of CPI & Gas Prices") +
+  xlim(c(0,20))
+
+
+
+summary(simpl.4) #significant
+
+
+
+
+simpl.5 <- lm(CPI~ InterestRate, data = impact.econ)
+
+summary(simpl.5) #not significant
+
+ggplot(impact.econ, aes(y=CPI, x= InterestRate))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Interest Rate", y= "CPI", title =  "Regression of CPI & Interest Rate")
+
+
+
+
+
+
+
+simpl.6 <- lm (CPI ~ M2, data = impact.econ)
+
+summary(simpl.6) #significant
+
+lin.reg.m2 <- ggplot(impact.econ, aes(y=CPI, x= M2))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "M2", y= "CPI", title =  "Regression of CPI & M2") +
+  scale_x_continuous(labels = comma, limits = c(0,100000))
+
+lin.reg.m2
+
+lin.reg.m2+
+  xlim(c(0,100000)) +
+  scale_x_continuous(labels = comma)
+  
+
+
+
+lin
+
+simpl.7 <- lm(CPI~ PPI, data = impact.econ)
+
+ggplot(impact.econ, aes(y=CPI, x= PPI))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "PPI", y= "CPI", title =  "Regression of CPI & PPI")+
+  xlim(c(0,240))
+
+
+
+summary(simpl.7) #significant
+
+
+
+
+
+#now that we have our variables established, we can create our multiple regression 
+
+#multiple regression equation 
+
+multiple.regression <- lm(CPI ~ UNRATE + AvgEPrices + GasPrices + M2 + PPI, data = impact.econ)
+
+summary(multiple.regression)
+
+plot(multiple.regression)
+
+#multiple regression model 1- visuals
+avPlots(multiple.regression)
+
+
+multiple.regression2 <- lm(CPI ~ UNRATE + AvgEPrices + PPI, data = impact.econ)
+summary(multiple.regression2)
+
+#multiple regression model 2 - visuals
+
+avPlots(multiple.regression2)
+
+
+
+
+```
+
+
+
+
+
+
+
+
