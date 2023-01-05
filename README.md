@@ -1,3 +1,7 @@
+<h1> Data Analysis Website</h1>
+
+
+
 - WELCOME TO MY PAGE!
 - 👋 Hello, welcome to my projects page. This is @MerlinsNotebook and you will be seeing projects I have or am currently working on. 
 - 👀 My focus is in statistics, data analysis, and machine learning. I am also programming using R, Python, SQL, HTML, CSS, and Javascript.  
