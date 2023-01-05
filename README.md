@@ -1,6 +1,6 @@
 - WELCOME TO MY PAGE!
-- 👋 Hello, welcome to my projects page. This is @MerlinsNotebook but you can call me Merlin or simply "fancy data analyst"
-- 👀 I’m focused on using programs such as python and r. These programs allow me analyze data, visualize, machine learn and deal with AI programming. 
+- 👋 Hello, welcome to my projects page. This is @MerlinsNotebook and you will be seeing projects I have or am currently working on 
+- 👀 My focus is in statistics, data analysis, and machine learning. I am also programming using R, Python, SQL, HTML, CSS, and Javascript.  
 - 🌱 I’m currently furthering my knowledge in machine learning and AI. 
 - 💞️ I’m looking to collaborate on data analysis projects! So, if you have a large file of data waiting to be cleaned then send it my way!
 - 📫 How to reach me: connect with me via LinkedIn: https://www.linkedin.com/in/merlin-castillo-18b1491b7/
