@@ -8,6 +8,7 @@
 - 🌱 I’m currently furthering my knowledge in machine learning and AI. 
 - 💞️ I’m looking to collaborate on data analysis projects! So, if you have a large file of data waiting to be cleaned then send it my way!
 - 📫 How to reach me: connect with me via LinkedIn: https://www.linkedin.com/in/merlin-castillo-18b1491b7/
+- All current projects, simple assignments can be found in 'MerlinsNotebook' Repository
 
 
 <!---
