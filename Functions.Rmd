@@ -1,0 +1,56 @@
+---
+title: "Function Trials"
+author: "MERLIN CASTILLO"
+date: '2023-01-04'
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+
+library(dplyr)
+ 
+
+
+
+#write a greeting function that saus "good morning", "good afternoon", "good evening" depending on the time of day 
+
+greet <- function(time = lubridate::now(), name){
+  hour <- parse_number(str_sub(time,12,13))
+  if(hour < 12){
+    cat("good morning", name)
+    
+  } else if (hour < 17){
+    cat("good afternoon", name)
+  }else {
+    cat("good evening", name)
+  }
+}
+
+greet("2023-01-01 12:12:12", "Othello")
+
+
+
+
+#writing the fizzbuzz function: it takes a single number as input 
+
+
+
+fizzbuzz <- function(x){
+  if(x%%15 == 0){
+    print("fizzbuzz")
+  }else if(x%%3 == 0){
+    print("fizz")
+  }else if(x%%5 == 0){
+    print("buzz")
+  }else{
+    print(x)
+  }
+}
+
+fizzbuzz(33)
+fizzbuzz(11)
+fizzbuzz(15)
+fizzbuzz(5)
+
+```
