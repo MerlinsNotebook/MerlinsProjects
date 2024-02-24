@@ -13,7 +13,7 @@ library(dplyr)
 
 
 
-#write a greeting function that saus "good morning", "good afternoon", "good evening" depending on the time of day 
+#write a greeting function that says "good morning", "good afternoon", "good evening" depending on the time of day 
 
 greet <- function(time = lubridate::now(), name){
   hour <- parse_number(str_sub(time,12,13))
