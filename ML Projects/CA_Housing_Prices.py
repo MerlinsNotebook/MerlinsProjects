@@ -107,7 +107,7 @@ from sklearn.model_selection import train_test_split
 
 train_set, test_set = train_test_split(housing, test_size= 0.2, random_state = 42)
 
-#next up we will talk about sampling bias or whatever idk im so bored 
+#next up we will talk about sampling bias
 
 #as we look into the median income we realize that the histogram flows around 2-5 (tens of thousands of dollars) but it could be true that some median incomes goes far beyond 6.
 
